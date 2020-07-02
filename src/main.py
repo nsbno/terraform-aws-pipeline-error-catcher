@@ -15,6 +15,19 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
+def get_errors(json_input, error_key):
+    errors = []
+    for element in json_input:
+        if error_key in element:
+            error = element[error_key]
+        elif all(key in ["Error", "Cause"] for key in element):
+            error = element
+        else:
+            continue
+        errors.append(error)
+    return errors
+
+
 def lambda_handler(event, context):
     logger.info("Lambda triggered with event '%s'", event)
     token = event["token"]
@@ -28,9 +41,7 @@ def lambda_handler(event, context):
             f"Expected the input to be a list, not {type(json_input)}"
         )
 
-    errors = [
-        result[error_key] for result in json_input if error_key in result
-    ]
+    errors = get_errors(json_input, error_key)
 
     if fail_on_errors and len(errors):
         error_codes = "|".join(error["Error"] for error in errors)
