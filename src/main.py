@@ -38,7 +38,7 @@ def lambda_handler(event, context):
     client = boto3.client("stepfunctions")
     if not isinstance(json_input, list):
         raise ValueError(
-            f"Expected the input to be a list, not {type(json_input)}"
+            f"Expected the input to be a list containing the outputs of each branch in a parallel state, but got type '{type(json_input)}'"
         )
 
     errors = get_errors(json_input, error_key)
