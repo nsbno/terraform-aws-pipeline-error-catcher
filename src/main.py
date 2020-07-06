@@ -20,7 +20,7 @@ def get_errors(json_input, error_key):
     for element in json_input:
         if error_key in element:
             error = element[error_key]
-        elif all(key in ["Error", "Cause"] for key in element):
+        elif all(key in element for key in ["Error", "Cause"]):
             error = element
         else:
             continue
