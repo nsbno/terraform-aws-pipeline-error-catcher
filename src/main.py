@@ -32,7 +32,7 @@ def lambda_handler(event, context):
     logger.info("Lambda triggered with event '%s'", event)
     token = event["token"]
     fail_on_errors = event.get("fail_on_errors", True)
-    error_key = event.get("error_key", "errors")
+    error_key = event.get("error_key", "")
     json_input = event["input"]
 
     client = boto3.client("stepfunctions")
