@@ -42,6 +42,7 @@ def lambda_handler(event, context):
         )
 
     errors = get_errors(json_input, error_key)
+    logger.info("Found errors %s", errors)
 
     if fail_on_errors and len(errors):
         error_codes = "|".join(error["Error"] for error in errors)
