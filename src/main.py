@@ -18,7 +18,7 @@ logger.setLevel(logging.INFO)
 def get_errors(json_input, error_key):
     errors = []
     for element in json_input:
-        if error_key and error_key in element:
+        if error_key and all(key in element.get(error_key, {}) for key in ["Error", "Cause"]):
             error = element[error_key]
         elif all(key in element for key in ["Error", "Cause"]):
             error = element
