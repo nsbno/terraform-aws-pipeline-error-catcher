@@ -16,6 +16,7 @@ logger.setLevel(logging.INFO)
 
 
 def get_errors(json_input, error_key):
+    """Return the error objects (objects containing both an "Error" and a "Cause" key) found in the input JSON"""
     errors = []
     for element in json_input:
         if error_key and all(key in element.get(error_key, {}) for key in ["Error", "Cause"]):
