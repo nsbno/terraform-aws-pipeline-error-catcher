@@ -1,6 +1,22 @@
 ## terraform-aws-pipeline-error-catcher
 A Terraform module that creates a Lambda function that can be used inside an AWS Step Function to check if any errors occured in a previous parallel state. One of the inputs to the Lambda, `fail_on_errors`, determines if the Lambda should stop the Step Function execution if an error has occured, or if it simply should return a boolean.
 
+An _error_ is in this context defined as a JSON object that contains the two keys `Error` and `Cause` -- the format used by AWS Step Functions for errors.
+
+## Lambda inputs
+
+#### `input` (required)
+A list of outputs from a set of branches in a parallel state.
+
+#### `token` (required)
+A Step Function token used to report back success or failure.
+
+#### `error_key` (optional)
+If `error_key` is set, the Lambda expects each element in the `input` list to expose its error object under the given key. If no such key is provided, the Lambda expects each list element to be an error object.
+
+#### `fail_on_errors` (optional)
+By default, the error catching state will fail if any errors are found in the `input` variable. This can be disabled by setting `fail_on_errors` to `false`, in which the state will report success and output a boolean reflecting if errors were found or not.
+
 ## Example
 Add the module to your Terraform code:
 ```terraform
@@ -21,7 +37,7 @@ A minimal example of a state machine definition that uses the Lambda function cr
       "Comment": "A parallel state",
       "Type": "Parallel",
       "Next": "Check for Errors",
-      "ResultPath": "$.Result",
+      "ResultPath": "$.result",
       "Branches": [
         {
           "StartAt": "Do Stuff (Branch 1)",
@@ -80,7 +96,7 @@ A minimal example of a state machine definition that uses the Lambda function cr
         "FunctionName": "pipeline-error-catcher",
         "Payload":  {
           "token.$": "$$.Task.Token",
-          "input.$": "$.Result",
+          "input.$": "$.result",
           "fail_on_errors": true,
           "error_key": "errors"
         }
