@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 #
-# Copyright (C) 2020 Erlend Ekern <dev@ekern.me>
+# Copyright (C) 2020 Vy
 #
 # Distributed under terms of the MIT license.
 
 """
-
+A Lambda function that looks for AWS Step Functions error objects in
+a JSON input.
 """
 import logging
 import json
@@ -52,17 +53,19 @@ def lambda_handler(event, context):
     fail_on_errors = event.get("fail_on_errors", True)
     json_input = event["input"]
 
-    client = boto3.client("stepfunctions")
     errors = get_error_objects(json_input)
     logger.info("Found errors %s", errors)
 
+    client = boto3.client("stepfunctions")
     if fail_on_errors and len(errors):
         error_codes = "|".join(error["Error"] for error in errors)
         cause = (
             "Multiple states failed" if len(errors) > 1 else errors[0]["Cause"]
         )
         client.send_task_failure(
-            error=error_codes, cause=cause, taskToken=token,
+            error=error_codes,
+            cause=cause,
+            taskToken=token,
         )
     else:
         output = True if len(errors) else False
