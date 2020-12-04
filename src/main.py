@@ -15,18 +15,35 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def get_errors(json_input, error_key):
-    """Return the error objects (objects containing both an "Error" and a "Cause" key) found in the input JSON"""
-    errors = []
-    for element in json_input:
-        if error_key and all(key in element.get(error_key, {}) for key in ["Error", "Cause"]):
-            error = element[error_key]
-        elif all(key in element for key in ["Error", "Cause"]):
-            error = element
+def get_error_objects(obj):
+    """Recursively scan a dictionary or a list and return a list of objects that look like AWS Step Functions error objects.
+
+    An object is considered an error object iff it contains only an `Error` key, or both an `Error` and `Cause` key.
+
+    """
+    results = []
+    if isinstance(obj, list):
+        for item in obj:
+            results += get_error_objects(item)
+    elif isinstance(obj, dict):
+        if ("Error" in obj and "Cause" in obj and len(obj) == 2) or (
+            "Error" in obj and len(obj) == 1
+        ):
+            error_obj = {
+                "Error": obj["Error"],
+                "Cause": obj.get("Cause", "Unknown cause"),
+            }
+            if all(isinstance(val, str) for key, val in error_obj.items()):
+                results.append(
+                    {
+                        "Error": obj["Error"],
+                        "Cause": obj.get("Cause", "Unknown cause"),
+                    }
+                )
         else:
-            continue
-        errors.append(error)
-    return errors
+            for key, val in obj.items():
+                results += get_error_objects(val)
+    return results
 
 
 def lambda_handler(event, context):
