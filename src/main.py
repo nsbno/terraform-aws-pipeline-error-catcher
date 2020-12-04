@@ -50,16 +50,10 @@ def lambda_handler(event, context):
     logger.info("Lambda triggered with event '%s'", event)
     token = event["token"]
     fail_on_errors = event.get("fail_on_errors", True)
-    error_key = event.get("error_key", "")
     json_input = event["input"]
 
     client = boto3.client("stepfunctions")
-    if not isinstance(json_input, list):
-        raise ValueError(
-            f"Expected the input to be a list containing the outputs of each branch in a parallel state, but got type '{type(json_input)}'"
-        )
-
-    errors = get_errors(json_input, error_key)
+    errors = get_error_objects(json_input)
     logger.info("Found errors %s", errors)
 
     if fail_on_errors and len(errors):
