@@ -6,7 +6,7 @@ One of the inputs to the Lambda, `fail_on_errors`, determines if the Lambda shou
 ## Lambda inputs
 
 #### `input` (required)
-A list of outputs from a set of branches in a parallel state.
+A JSON list or object that contains outputs from previous states. This is where the Lambda will look for error objects.
 
 #### `token` (required)
 A Step Function token used to report back success or failure.
@@ -83,7 +83,7 @@ A minimal example of a state machine definition that uses the Lambda function cr
       ]
     },
     "Check for Errors":{
-      "Comment": "Check if previous any errors were catched in a previous parallel state",
+      "Comment": "Check if previous any errors were catched in a previous state",
       "Type": "Task",
       "ResultPath": "$.errors_found",
       "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
