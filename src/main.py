@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 #
-# Copyright (C) 2020 Erlend Ekern <dev@ekern.me>
+# Copyright (C) 2020 Vy
 #
 # Distributed under terms of the MIT license.
 
 """
-
+A Lambda function that looks for AWS Step Functions error objects in
+a JSON input.
 """
 import logging
 import json
@@ -15,43 +16,56 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def get_errors(json_input, error_key):
-    """Return the error objects (objects containing both an "Error" and a "Cause" key) found in the input JSON"""
-    errors = []
-    for element in json_input:
-        if error_key and all(key in element.get(error_key, {}) for key in ["Error", "Cause"]):
-            error = element[error_key]
-        elif all(key in element for key in ["Error", "Cause"]):
-            error = element
+def get_error_objects(obj):
+    """Recursively scan a dictionary or a list and return a list of objects that look like AWS Step Functions error objects.
+
+    An object is considered an error object iff it contains only an `Error` key, or both an `Error` and `Cause` key.
+
+    """
+    results = []
+    if isinstance(obj, list):
+        for item in obj:
+            results += get_error_objects(item)
+    elif isinstance(obj, dict):
+        if ("Error" in obj and "Cause" in obj and len(obj) == 2) or (
+            "Error" in obj and len(obj) == 1
+        ):
+            error_obj = {
+                "Error": obj["Error"],
+                "Cause": obj.get("Cause", "Unknown cause"),
+            }
+            if all(isinstance(val, str) for key, val in error_obj.items()):
+                results.append(
+                    {
+                        "Error": obj["Error"],
+                        "Cause": obj.get("Cause", "Unknown cause"),
+                    }
+                )
         else:
-            continue
-        errors.append(error)
-    return errors
+            for key, val in obj.items():
+                results += get_error_objects(val)
+    return results
 
 
 def lambda_handler(event, context):
     logger.info("Lambda triggered with event '%s'", event)
     token = event["token"]
     fail_on_errors = event.get("fail_on_errors", True)
-    error_key = event.get("error_key", "")
     json_input = event["input"]
 
-    client = boto3.client("stepfunctions")
-    if not isinstance(json_input, list):
-        raise ValueError(
-            f"Expected the input to be a list containing the outputs of each branch in a parallel state, but got type '{type(json_input)}'"
-        )
-
-    errors = get_errors(json_input, error_key)
+    errors = get_error_objects(json_input)
     logger.info("Found errors %s", errors)
 
+    client = boto3.client("stepfunctions")
     if fail_on_errors and len(errors):
         error_codes = "|".join(error["Error"] for error in errors)
         cause = (
             "Multiple states failed" if len(errors) > 1 else errors[0]["Cause"]
         )
         client.send_task_failure(
-            error=error_codes, cause=cause, taskToken=token,
+            error=error_codes,
+            cause=cause,
+            taskToken=token,
         )
     else:
         output = True if len(errors) else False

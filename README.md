@@ -1,18 +1,15 @@
 ## terraform-aws-pipeline-error-catcher
-A Terraform module that creates a Lambda function that can be used inside an AWS Step Function to check if any errors occured in a previous parallel state. One of the inputs to the Lambda, `fail_on_errors`, determines if the Lambda should stop the Step Function execution if an error has occured, or if it simply should return a boolean.
+A Terraform module that creates a Lambda function that can be used inside an AWS Step Function to check if any errors occured in one or more previous states. The Lambda function scans JSON input for AWS Step Functions error objects -- objects containing only an `Error` key or both an `Error` and `Cause` key.
 
-An _error_ is in this context defined as a JSON object that contains the two keys `Error` and `Cause` -- the format used by AWS Step Functions for errors.
+One of the inputs to the Lambda, `fail_on_errors`, determines if the Lambda should stop the Step Function execution if an error has occured, or if it simply should return a boolean.
 
 ## Lambda inputs
 
 #### `input` (required)
-A list of outputs from a set of branches in a parallel state.
+A JSON list or object that contains outputs from previous states. This is where the Lambda will look for error objects.
 
 #### `token` (required)
 A Step Function token used to report back success or failure.
-
-#### `error_key` (optional)
-If `error_key` is set, the Lambda expects each element in the `input` list to expose its error object under the given key. If no such key is provided, the Lambda expects each list element to be an error object.
 
 #### `fail_on_errors` (optional)
 By default, the error catching state will fail if any errors are found in the `input` variable. This can be disabled by setting `fail_on_errors` to `false`, in which the state will report success and output a boolean reflecting if errors were found or not.
@@ -47,7 +44,6 @@ A minimal example of a state machine definition that uses the Lambda function cr
               "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
               "Catch": [{
                 "ErrorEquals": ["States.ALL"],
-                "ResultPath": "$.errors",
                 "Next": "Catch Errors (Branch 1)"
               }],
               "Parameters": {
@@ -70,7 +66,6 @@ A minimal example of a state machine definition that uses the Lambda function cr
               "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
               "Catch": [{
                 "ErrorEquals": ["States.ALL"],
-                "ResultPath": "$.errors",
                 "Next": "Catch Errors (Branch 2)"
               }],
               "Parameters": {
@@ -88,7 +83,7 @@ A minimal example of a state machine definition that uses the Lambda function cr
       ]
     },
     "Check for Errors":{
-      "Comment": "Check if previous any errors were catched in a previous parallel state",
+      "Comment": "Check if previous any errors were catched in a previous state",
       "Type": "Task",
       "ResultPath": "$.errors_found",
       "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
@@ -97,8 +92,7 @@ A minimal example of a state machine definition that uses the Lambda function cr
         "Payload":  {
           "token.$": "$$.Task.Token",
           "input.$": "$.result",
-          "fail_on_errors": true,
-          "error_key": "errors"
+          "fail_on_errors": true
         }
       },
       "End": true

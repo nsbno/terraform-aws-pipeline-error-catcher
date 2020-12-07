@@ -1,0 +1,19 @@
+name: Test Lambda code
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7]
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+    - name: Install dependencies
+      run: |
+        cd src
+        pip install -r ci_requirements.txt
+    - name: Test
+      run: |
+        cd src && pytest
